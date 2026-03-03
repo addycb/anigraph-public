@@ -1,0 +1,187 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: anigraph-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro,z
+      - ./nginx/conf.d-dev:/etc/nginx/conf.d:ro,z
+    depends_on:
+      - vue-app
+      - backend
+    networks:
+      - anigraph-network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: anigraph-backend
+    environment:
+      - PORT=50051
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=anigraph
+      - POSTGRES_USER=anigraph
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-anigraph}
+      - ELASTICSEARCH_NODE=http://elasticsearch:9200
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - ADMIN_API_KEY=${ADMIN_API_KEY}
+    ports:
+      - "50051:50051"
+    depends_on:
+      - postgres
+      - elasticsearch
+    volumes:
+      - ./data:/app/data:z
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - anigraph-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "1.0"
+
+  vue-app:
+    image: node:20-alpine
+    container_name: anigraph-vue-app
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - VITE_API_BASE=/api
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./vue-app:/app:z
+      - /app/node_modules
+    networks:
+      - anigraph-network
+    restart: unless-stopped
+
+  neo4j:
+    build:
+      context: ./neo4j
+      dockerfile: Dockerfile
+    container_name: anigraph-neo4j
+    environment:
+      - NEO4J_AUTH=none
+      - NEO4J_PLUGINS=["apoc","apoc-extended","graph-data-science"]
+      - NEO4J_dbms_security_procedures_unrestricted=apoc.*,gds.*
+      - NEO4J_dbms_security_procedures_allowlist=apoc.*,gds.*
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_extended=true
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+      - NEO4J_dbms_memory_heap_initial__size=6G
+      - NEO4J_dbms_memory_heap_max__size=6G
+      - RESET_PORT=7475
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+      - "7475:7475"  # Reset endpoint
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+      - ./data/neo4j_import:/var/lib/neo4j/import
+    networks:
+      - anigraph-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: anigraph-postgres
+    environment:
+      - POSTGRES_DB=anigraph
+      - POSTGRES_USER=anigraph
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-anigraph}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks:
+      - anigraph-network
+    restart: unless-stopped
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=512MB"
+      - "-c"
+      - "effective_cache_size=1536MB"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: anigraph-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - anigraph-network
+    restart: unless-stopped
+
+  umami-db:
+    image: postgres:15-alpine
+    container_name: anigraph-umami-db
+    environment:
+      - POSTGRES_DB=umami
+      - POSTGRES_USER=umami
+      - POSTGRES_PASSWORD=umami
+    volumes:
+      - umami-db-data:/var/lib/postgresql/data
+    networks:
+      - anigraph-network
+    restart: unless-stopped
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: anigraph-umami
+    environment:
+      - DATABASE_URL=postgresql://umami:umami@umami-db:5432/umami
+      - DATABASE_TYPE=postgresql
+      - APP_SECRET=replace-this-with-a-random-string-in-production
+    ports:
+      - "3001:3000"
+    depends_on:
+      - umami-db
+    networks:
+      - anigraph-network
+    restart: unless-stopped
+
+networks:
+  anigraph-network:
+    driver: bridge
+
+volumes:
+  neo4j-data:
+  neo4j-logs:
+  neo4j-import:
+  postgres-data:
+  elasticsearch-data:
+  umami-db-data:

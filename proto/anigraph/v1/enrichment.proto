@@ -1,0 +1,220 @@
+syntax = "proto3";
+
+package anigraph.v1;
+
+option go_package = "anigraph/backend/gen/anigraph/v1;anigraphv1";
+
+import "anigraph/v1/common.proto";
+
+service EnrichmentService {
+  // EnrichWikidata resolves anime to Wikidata QIDs and fetches properties.
+  // Client streams anime rows, server streams resolved results.
+  rpc EnrichWikidata(stream EnrichWikidataRequest) returns (stream EnrichWikidataResponse);
+
+  // BackfillWikidataProps fetches extra properties for anime that already have QIDs.
+  rpc BackfillWikidataProps(stream BackfillWikidataPropsRequest) returns (stream BackfillWikidataPropsResponse);
+
+  // BackfillMalIds maps AniList IDs to MyAnimeList IDs via public databases.
+  rpc BackfillMalIds(BackfillMalIdsRequest) returns (BackfillMalIdsResponse);
+
+  // ScrapeWikipediaProduction extracts "Production" sections from Wikipedia.
+  rpc ScrapeWikipediaProduction(stream ScrapeWikipediaProductionRequest) returns (stream ScrapeWikipediaProductionResponse);
+
+  // EnrichStaffAlternativeNames fetches romanization variants from AniList.
+  rpc EnrichStaffAlternativeNames(stream EnrichStaffAlternativeNamesRequest) returns (stream EnrichStaffAlternativeNamesResponse);
+
+  // EnrichWikidataStudios resolves studios to Wikidata entities.
+  rpc EnrichWikidataStudios(stream EnrichWikidataStudiosRequest) returns (stream EnrichWikidataStudiosResponse);
+
+  // ScrapeWikipediaStudioContent extracts Wikipedia content for studios.
+  rpc ScrapeWikipediaStudioContent(stream ScrapeWikipediaStudioContentRequest) returns (stream ScrapeWikipediaStudioContentResponse);
+}
+
+// --- EnrichWikidata ---
+
+message EnrichWikidataRequest {
+  repeated AnimeWikidataInput entries = 1;
+}
+
+message AnimeWikidataInput {
+  int32 anilist_id = 1;
+  int32 mal_id = 2;
+  string title_english = 3;
+  string title_romaji = 4;
+  int32 season_year = 5;
+  string type = 6;   // "ANIME" or "MANGA"
+  string format = 7; // "TV", "MOVIE", etc.
+}
+
+message EnrichWikidataResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    WikidataResultBatch results = 2;
+  }
+}
+
+message WikidataResultBatch {
+  repeated WikidataResult entries = 1;
+}
+
+message WikidataResult {
+  int32 anilist_id = 1;
+  string wikidata_qid = 2;
+  string method = 3;          // "mal_sparql", "anilist_sparql", "title_search", "not_found"
+  string wikipedia_en = 4;
+  string wikipedia_ja = 5;
+  string livechart_id = 6;
+  string notify_id = 7;
+  string tvdb_id = 8;
+  string tmdb_movie_id = 9;
+  string tmdb_tv_id = 10;
+  string tvmaze_id = 11;
+  string mywaifulist_id = 12;
+  string unconsenting_media_id = 13;
+}
+
+// --- BackfillWikidataProps ---
+
+message BackfillWikidataPropsRequest {
+  repeated AnimeWikidataPropsInput entries = 1;
+}
+
+message AnimeWikidataPropsInput {
+  int32 anilist_id = 1;
+  string wikidata_qid = 2;
+}
+
+message BackfillWikidataPropsResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    WikidataResultBatch results = 2;
+  }
+}
+
+// --- BackfillMalIds ---
+
+message BackfillMalIdsRequest {
+  repeated int32 anilist_ids = 1;
+}
+
+message BackfillMalIdsResponse {
+  repeated MalIdMapping mappings = 1;
+  int32 found = 2;
+  int32 missing = 3;
+}
+
+message MalIdMapping {
+  int32 anilist_id = 1;
+  int32 mal_id = 2;
+}
+
+// --- Wikipedia Production ---
+
+message ScrapeWikipediaProductionRequest {
+  repeated WikipediaInput entries = 1;
+}
+
+message WikipediaInput {
+  int32 anilist_id = 1;
+  string wikipedia_en = 2;
+}
+
+message ScrapeWikipediaProductionResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    WikipediaProductionBatch results = 2;
+  }
+}
+
+message WikipediaProductionBatch {
+  repeated WikipediaProductionResult entries = 1;
+}
+
+message WikipediaProductionResult {
+  int32 anilist_id = 1;
+  string wikipedia_url = 2;
+  string production_html = 3;
+}
+
+// --- Staff Alternative Names ---
+
+message EnrichStaffAlternativeNamesRequest {
+  repeated int32 staff_ids = 1;
+}
+
+message EnrichStaffAlternativeNamesResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    StaffAlternativeNamesBatch results = 2;
+  }
+}
+
+message StaffAlternativeNamesBatch {
+  repeated StaffAlternativeNamesResult entries = 1;
+}
+
+message StaffAlternativeNamesResult {
+  int32 staff_id = 1;
+  repeated string alternative_names = 2;
+}
+
+// --- Wikidata Studios ---
+
+message EnrichWikidataStudiosRequest {
+  repeated StudioWikidataInput entries = 1;
+}
+
+message StudioWikidataInput {
+  int32 studio_id = 1;
+  string name = 2;
+}
+
+message EnrichWikidataStudiosResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    WikidataStudioResultBatch results = 2;
+  }
+}
+
+message WikidataStudioResultBatch {
+  repeated WikidataStudioResult entries = 1;
+}
+
+message WikidataStudioResult {
+  int32 studio_id = 1;
+  string wikidata_qid = 2;
+  string method = 3;
+  string wikipedia_en = 4;
+  string wikipedia_ja = 5;
+  string website_url = 6;
+  string twitter_handle = 7;
+  string youtube_channel_id = 8;
+}
+
+// --- Wikipedia Studio Content ---
+
+message ScrapeWikipediaStudioContentRequest {
+  repeated WikipediaStudioInput entries = 1;
+}
+
+message WikipediaStudioInput {
+  int32 studio_id = 1;
+  string wikipedia_en = 2;
+}
+
+message ScrapeWikipediaStudioContentResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    WikipediaStudioContentBatch results = 2;
+  }
+}
+
+message WikipediaStudioContentBatch {
+  repeated WikipediaStudioContentResult entries = 1;
+}
+
+message WikipediaStudioContentResult {
+  int32 studio_id = 1;
+  string wikipedia_url = 2;
+  string content_html = 3;
+}

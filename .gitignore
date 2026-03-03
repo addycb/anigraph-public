@@ -1,0 +1,58 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Build output
+.output/
+.cache/
+dist/
+.claude/
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Docker volumes (data persisted locally)
+neo4j-data/
+elasticsearch-data/
+
+# OS
+Thumbs.db
+data/neo4j_import/
+nginx/certbot/
+
+# Local notes & docs
+CHANGES-SUMMARY.md
+GOOGLE-OAUTH-SETUP.md
+HANDOFF-PROMPT.md
+SECURITY-IMPROVEMENTS.md
+TASTE-GRAPH-IMPLEMENTATION.md
+industryinsights.txt
+fix global rankings.txt
+anigraph_dump.bin
+deploy-security-improvements.sh
+
+# backend binaries/test
+backend/compute_recommendations_alpine
+backend/compute_recommendations_test
+
+# Other
+other/

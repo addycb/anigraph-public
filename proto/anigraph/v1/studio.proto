@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package anigraph.v1;
+
+option go_package = "anigraph/backend/gen/anigraph/v1;anigraphv1";
+
+import "anigraph/v1/common.proto";
+
+service StudioService {
+  // FetchStudioImages scrapes studio images and descriptions from AniList.
+  rpc FetchStudioImages(FetchStudioImagesRequest) returns (stream FetchStudioImagesResponse);
+}
+
+message FetchStudioImagesRequest {
+  repeated StudioImageInput studios = 1;
+}
+
+message StudioImageInput {
+  string studio_name = 1;
+  // Up to 3 MAL anime IDs to use as fallbacks for finding studio images.
+  repeated int32 mal_anime_ids = 2;
+}
+
+message FetchStudioImagesResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    StudioImageBatch results = 2;
+    FetchStudioImagesComplete complete = 3;
+  }
+}
+
+message StudioImageBatch {
+  repeated StudioImageResult entries = 1;
+}
+
+message StudioImageResult {
+  string studio_name = 1;
+  int32 mal_id = 2;
+  string image_url = 3;
+  string description = 4;
+}
+
+message FetchStudioImagesComplete {
+  int32 total = 1;
+  int32 fetched = 2;
+  int32 failed = 3;
+  double duration_secs = 4;
+}

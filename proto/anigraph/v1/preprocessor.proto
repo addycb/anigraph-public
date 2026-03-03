@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package anigraph.v1;
+
+option go_package = "anigraph/backend/gen/anigraph/v1;anigraphv1";
+
+import "anigraph/v1/common.proto";
+
+service PreprocessorService {
+  // PreprocessData takes raw scrape data and produces cleaned, extracted entities.
+  // Streams progress then batched results for each entity type.
+  rpc PreprocessData(PreprocessDataRequest) returns (stream PreprocessDataResponse);
+}
+
+message PreprocessDataRequest {
+  // Directory containing the raw CSV files from the scraper.
+  string data_dir = 1;
+}
+
+message PreprocessDataResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    PreprocessBatch batch = 2;
+    PreprocessComplete complete = 3;
+  }
+}
+
+// PreprocessBatch streams cleaned/extracted data in typed batches.
+message PreprocessBatch {
+  // Processed media rows (date-fixed, sanitized).
+  repeated MediaEntry media = 1;
+  // Processed staff rows.
+  repeated StaffEntry staff = 2;
+  // Aggregated staff edges (roles combined per anime-staff pair).
+  repeated AggregatedStaffEdge aggregated_edges = 3;
+  // Processed relations.
+  repeated MediaRelation relations = 4;
+
+  // Extracted entities.
+  repeated string genres = 5;
+  repeated ExtractedTag tags = 6;
+  repeated ExtractedStudio studios = 7;
+
+  // Junction data.
+  repeated AnimeGenre anime_genres = 8;
+  repeated AnimeTag anime_tags = 9;
+  repeated AnimeStudio anime_studios = 10;
+
+  // Crossover anime IDs (for franchise detection).
+  repeated int32 crossover_anime_ids = 11;
+}
+
+message AggregatedStaffEdge {
+  int32 media_id = 1;
+  int32 staff_id = 2;
+  repeated string roles = 3;
+}
+
+message ExtractedTag {
+  string name = 1;
+  string category = 2;
+}
+
+message ExtractedStudio {
+  int32 studio_id = 1;
+  string name = 2;
+}
+
+message AnimeGenre {
+  int32 anime_id = 1;
+  string genre_name = 2;
+}
+
+message AnimeTag {
+  int32 anime_id = 1;
+  string tag_name = 2;
+  int32 rank = 3;
+}
+
+message AnimeStudio {
+  int32 anime_id = 1;
+  int32 studio_id = 2;
+  bool is_main = 3;
+}
+
+message PreprocessComplete {
+  int32 media_total = 1;
+  int32 media_dates_fixed = 2;
+  int32 staff_total = 3;
+  int32 edges_total = 4;
+  int32 edges_aggregated = 5;
+  int32 relations_total = 6;
+  int32 genres_extracted = 7;
+  int32 tags_extracted = 8;
+  int32 studios_extracted = 9;
+  int32 anime_genres_extracted = 10;
+  int32 anime_tags_extracted = 11;
+  int32 anime_studios_extracted = 12;
+  int32 crossover_anime_count = 13;
+  int32 anime_tags_full_total = 14;
+  int32 manga_tags_full_total = 15;
+  double duration_secs = 16;
+}

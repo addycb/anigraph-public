@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package anigraph.v1;
+
+option go_package = "anigraph/backend/gen/anigraph/v1;anigraphv1";
+
+import "anigraph/v1/common.proto";
+
+service SakugabooruService {
+  // MatchTags downloads Sakugabooru tags and matches them to anime/staff.
+  rpc MatchTags(MatchTagsRequest) returns (stream MatchTagsResponse);
+
+  // FetchPosts fetches Sakugabooru posts for matched anime and staff tags.
+  rpc FetchPosts(FetchPostsRequest) returns (stream FetchPostsResponse);
+}
+
+// --- MatchTags ---
+
+message MatchTagsRequest {
+  repeated AnimeMatchInput anime = 1;
+  repeated StaffMatchInput staff = 2;
+}
+
+message AnimeMatchInput {
+  int32 anilist_id = 1;
+  string title_english = 2;
+  string title_romaji = 3;
+  repeated string synonyms = 4;
+}
+
+message StaffMatchInput {
+  int32 staff_id = 1;
+  string name_en = 2;
+  string name_ja = 3;
+  repeated string alternative_names = 4;
+}
+
+message MatchTagsResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    MatchTagsBatch results = 2;
+    MatchTagsComplete complete = 3;
+  }
+}
+
+message MatchTagsBatch {
+  repeated AnimeMatch anime_matches = 1;
+  repeated StaffMatch staff_matches = 2;
+}
+
+message AnimeMatch {
+  int32 anilist_id = 1;
+  string sakugabooru_tag = 2;
+  int32 post_count = 3;
+  bool found = 4;
+  string method = 5;
+}
+
+message StaffMatch {
+  int32 staff_id = 1;
+  string sakugabooru_tag = 2;
+  int32 post_count = 3;
+  string tag_type = 4;
+  bool found = 5;
+  string method = 6;
+}
+
+message MatchTagsComplete {
+  int32 anime_matched = 1;
+  int32 anime_unmatched = 2;
+  int32 staff_matched = 3;
+  int32 staff_unmatched = 4;
+  double duration_secs = 5;
+}
+
+// --- FetchPosts ---
+
+message FetchPostsRequest {
+  repeated AnimeTagInput anime_tags = 1;
+  repeated StaffTagInput staff_tags = 2;
+}
+
+message AnimeTagInput {
+  int32 anilist_id = 1;
+  string sakugabooru_tag = 2;
+}
+
+message StaffTagInput {
+  int32 staff_id = 1;
+  string sakugabooru_tag = 2;
+}
+
+message FetchPostsResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    FetchPostsBatch results = 2;
+    FetchPostsComplete complete = 3;
+  }
+}
+
+message FetchPostsBatch {
+  repeated SakugabooruPost posts = 1;
+  repeated AnimePostLink anime_links = 2;
+  repeated StaffPostLink staff_links = 3;
+}
+
+message SakugabooruPost {
+  int32 post_id = 1;
+  string file_url = 2;
+  string preview_url = 3;
+  string source = 4;
+  string rating = 5;
+  string file_ext = 6;
+  int32 score = 7;
+  string created_at = 8;
+}
+
+message AnimePostLink {
+  int32 anilist_id = 1;
+  int32 post_id = 2;
+}
+
+message StaffPostLink {
+  int32 staff_id = 1;
+  int32 post_id = 2;
+}
+
+message FetchPostsComplete {
+  int32 total_posts = 1;
+  int32 anime_links = 2;
+  int32 staff_links = 3;
+  double duration_secs = 4;
+}

@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package anigraph.v1;
+
+option go_package = "anigraph/backend/gen/anigraph/v1;anigraphv1";
+
+// ProgressUpdate is sent periodically during long-running streaming RPCs.
+message ProgressUpdate {
+  int32 processed = 1;
+  int32 total = 2;
+  string phase = 3;     // e.g. "scraping", "fetching_staff", "writing_csv"
+  string message = 4;   // human-readable status line
+  double elapsed_secs = 5;
+  double rate_per_sec = 6;
+}
+
+// FuzzyDate represents a possibly-partial date (AniList style).
+message FuzzyDate {
+  int32 year = 1;
+  int32 month = 2;
+  int32 day = 3;
+}
+
+// MediaEntry represents one anime or manga from the AniList API.
+message MediaEntry {
+  int32 anilist_id = 1;
+  string type = 2;             // "ANIME" or "MANGA"
+  string format = 3;           // "TV", "MOVIE", "OVA", etc.
+  string status = 4;
+  string title_romaji = 5;
+  string title_english = 6;
+  string title_native = 7;
+  string description = 8;
+  FuzzyDate start_date = 9;
+  FuzzyDate end_date = 10;
+  string season = 11;
+  int32 season_year = 12;
+  int32 episodes = 13;
+  int32 duration = 14;
+  int32 chapters = 15;
+  int32 volumes = 16;
+  string country_of_origin = 17;
+  string source = 18;
+  string cover_image_large = 19;
+  string cover_image_medium = 20;
+  string cover_image_color = 21;
+  string banner_image = 22;
+  int32 average_score = 23;
+  int32 mean_score = 24;
+  int32 popularity = 25;
+  int32 favourites = 26;
+  int32 trending = 27;
+  bool is_adult = 28;
+  string site_url = 29;
+  int32 mal_id = 30;
+  repeated string genres = 31;
+  repeated MediaTag tags = 32;
+  repeated StudioLink studios = 33;
+  repeated string synonyms = 34;
+  string hashtag = 35;
+  string trailer_url = 36;
+  int32 updated_at = 37;
+}
+
+message MediaTag {
+  string name = 1;
+  string category = 2;
+  int32 rank = 3;
+}
+
+message StudioLink {
+  int32 studio_id = 1;
+  string name = 2;
+  bool is_main = 3;
+}
+
+// StaffEntry represents one staff member from AniList.
+message StaffEntry {
+  int32 staff_id = 1;
+  string name_full = 2;
+  string name_native = 3;
+  string name_first = 4;
+  string name_middle = 5;
+  string name_last = 6;
+  string image_large = 7;
+  string image_medium = 8;
+  string description = 9;
+  string gender = 10;
+  int32 age = 11;
+  FuzzyDate date_of_birth = 12;
+  FuzzyDate date_of_death = 13;
+  string home_town = 14;
+  string site_url = 15;
+  repeated string alternative_names = 16;
+  int32 favourites = 17;
+}
+
+// MediaStaffEdge links a media entry to a staff member with a role.
+message MediaStaffEdge {
+  int32 media_id = 1;
+  int32 staff_id = 2;
+  string role = 3;
+}
+
+// MediaRelation links two media entries (sequel, prequel, etc.).
+message MediaRelation {
+  int32 source_id = 1;
+  int32 target_id = 2;
+  string relation_type = 3;
+}
+
+// Recommendation pair with similarity score.
+message RecommendationPair {
+  int32 source_anilist_id = 1;
+  int32 target_anilist_id = 2;
+  float similarity = 3;
+  int32 rank = 4;
+}

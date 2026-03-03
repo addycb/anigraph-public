@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package anigraph.v1;
+
+option go_package = "anigraph/backend/gen/anigraph/v1;anigraphv1";
+
+import "anigraph/v1/common.proto";
+
+service ScraperService {
+  // ScrapeIncremental fetches new/updated media from AniList starting after max_id.
+  // Streams progress updates and then batched results (media, staff, edges, relations).
+  rpc ScrapeIncremental(ScrapeIncrementalRequest) returns (stream ScrapeIncrementalResponse);
+}
+
+message ScrapeIncrementalRequest {
+  int32 max_id = 1;  // highest anilist_id already in DB
+}
+
+message ScrapeIncrementalResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    ScrapeBatch batch = 2;
+    ScrapeComplete complete = 3;
+  }
+}
+
+message ScrapeBatch {
+  repeated MediaEntry media = 1;
+  repeated StaffEntry staff = 2;
+  repeated MediaStaffEdge edges = 3;
+  repeated MediaRelation relations = 4;
+  repeated int32 changed_staff_ids = 5;
+}
+
+message ScrapeComplete {
+  int32 total_media = 1;
+  int32 total_staff = 2;
+  int32 total_edges = 3;
+  int32 total_relations = 4;
+  int32 changed_staff_count = 5;
+  double duration_secs = 6;
+  repeated int32 failed_pages = 7;
+}

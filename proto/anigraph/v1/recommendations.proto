@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package anigraph.v1;
+
+option go_package = "anigraph/backend/gen/anigraph/v1;anigraphv1";
+
+import "anigraph/v1/common.proto";
+
+service RecommendationService {
+  // ComputeRecommendations computes tag-based similarity recommendations.
+  // Streams progress updates followed by batches of recommendation pairs.
+  rpc ComputeRecommendations(ComputeRecommendationsRequest) returns (stream ComputeRecommendationsResponse);
+}
+
+message ComputeRecommendationsRequest {
+  // Directory containing anime_tags_full.csv and manga_tags_full.csv.
+  string data_dir = 1;
+  // Output directory for binary + CSV files.
+  string output_dir = 2;
+  // If true, only compute recs for new anime (requires existing .bin file).
+  bool incremental = 3;
+  // Number of worker goroutines (0 = num CPUs).
+  int32 workers = 4;
+}
+
+message ComputeRecommendationsResponse {
+  oneof payload {
+    ProgressUpdate progress = 1;
+    RecommendationBatch batch = 2;
+    RecommendationsComplete complete = 3;
+  }
+}
+
+message RecommendationBatch {
+  repeated RecommendationPair recommendations = 1;
+}
+
+message RecommendationsComplete {
+  int32 total_anime = 1;
+  int32 total_recommendations = 2;
+  double duration_secs = 3;
+  string binary_path = 4;
+  string csv_path = 5;
+}

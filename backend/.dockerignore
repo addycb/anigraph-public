@@ -1,0 +1,11 @@
+*.csv
+*.bin
+*.txt
+*.json
+*_alpine
+scrape_incremental
+preprocess_csv_alpine
+compute_recommendations
+compute_recommendations_alpine
+scraper
+server
